@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mission Control - Vacantes</title>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #00ff00; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+        th { background: #1a1a1a; color: #fff; }
+        .bar { background: #dc3545; height: 10px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <h2>[ ADMIN ] Monitoreo de Presión de Vacantes</h2>
+    <div id="lastUpdate" style="color: #888;">Cargando enlace...</div>
+
+    <table id="statsTable">
+        <thead>
+            <tr>
+                <th>Curso</th>
+                <th>Demanda Total</th>
+                <th>Distribución por Sección (Top)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const SERVER_URL = 'https://devchrisacosta.net//api/admin/stats'; // REEMPLAZAR TRAS DEPLOY
+
+        async function fetchStats() {
+            try {
+                const res = await fetch(SERVER_URL);
+                const data = await res.json();
+                
+                // Convert object to array and sort by total demand (descending)
+                const sortedCourses = Object.entries(data).sort((a, b) => b[1].total - a[1].total);
+                
+                const tbody = document.querySelector('#statsTable tbody');
+                tbody.innerHTML = '';
+
+                sortedCourses.forEach(([code, stats]) => {
+                    // Sort sections within the course
+                    const sortedSecs = Object.entries(stats.sections).sort((a, b) => b[1] - a[1]);
+                    let secText = sortedSecs.map(([s, count]) => `Sec ${s}: ${count}`).join(' | ');
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight: bold; color: #fff;">${code}</td>
+                            <td>
+                                <div>${stats.total} peticiones</div>
+                                <div class="bar" style="width: ${Math.min(stats.total * 2, 100)}%;"></div>
+                            </td>
+                            <td style="color: #aaa;">${secText}</td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('lastUpdate').innerText = `Último ACK: ${new Date().toLocaleTimeString()}`;
+            } catch (e) {
+                document.getElementById('lastUpdate').innerText = `[!] Conexión perdida. Reintentando...`;
+            }
+        }
+
+        // Short-polling: fetch data every 3000ms
+        setInterval(fetchStats, 3000);
+        fetchStats();
+    </script>
+</body>
+</html>
